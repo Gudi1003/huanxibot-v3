@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>HuanXiBot V3</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- 本地 ethers.js（确保同目录下有 ethers.min.js） -->
+  <script src="./ethers.min.js"></script>
+  <style>
+    :root{
+      --bg0:#020617;
+      --bg1:#0b1220;
+      --card: rgba(15,23,42,0.92);
+      --stroke: rgba(75,85,99,0.75);
+      --muted:#9ca3af;
+      --text:#e5e7eb;
+      --good:#4ade80;
+      --warn:#fb923c;
+      --bad:#fca5a5;
+      --cyan:#38bdf8;
+      --shadow: 0 18px 40px rgba(0,0,0,.45);
+      --radius: 18px;
+      --logH: 190px;
+    }
+    * { box-sizing:border-box; }
+    html, body { height: 100%; }
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+      background: radial-gradient(circle at top, #1f2937 0, var(--bg0) 55%, #000 100%);
+      color:var(--text);
+      overflow:hidden; /* 关键：页面不整体滚动 */
+    }
+    a{ color:var(--cyan); text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+
+    /* ===== App Layout ===== */
+    .app{
+      height: 100%;
+      display:flex;
+      flex-direction:column;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 18px 14px 0;
+      gap: 12px;
+    }
+
+    header{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px 14px;
+    }
+    .title{
+      display:flex; align-items:center; gap:10px;
+      font-size: 22px; font-weight: 800;
+      letter-spacing: .2px;
+    }
+    .pill{
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      border:1px solid rgba(148,163,184,0.4);
+      background: rgba(15,23,42,0.7);
+      display:inline-flex; align-items:center; gap:6px;
+      color: var(--muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .subtitle{
+      margin-top:4px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height:1.45;
+    }
+
+    .right-actions{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+      gap: 8px;
+    }
+
+    .btn{
+      border-radius: 999px;
+      padding: 8px 16px;
+      background: linear-gradient(to right, #22c55e, #16a34a);
+      color:white;
+      border:none;
+      cursor:pointer;
+      font-size: 13px;
+      font-weight: 700;
+      display:inline-flex; align-items:center; gap:6px;
+      box-shadow: 0 10px 25px rgba(34,197,94,0.28);
+    }
+    .btn:hover{ filter:brightness(1.05); }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; box-shadow:none; }
+    .btn-secondary{
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: rgba(31,41,55,0.9);
+      color: var(--text);
+      border: 1px solid rgba(75,85,99,0.85);
+      cursor:pointer;
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .btn-secondary:hover{ filter:brightness(1.08); }
+    .btn-ghost{
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(15,23,42,0.25);
+      color: var(--text);
+      border: 1px solid rgba(75,85,99,0.55);
+      cursor:pointer;
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .btn-ghost:hover{ filter:brightness(1.12); }
+
+    /* ===== Status Bar ===== */
+    .status-bar{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 10px;
+      font-size: 12px;
+    }
+    .status-pill{
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.85);
+      border: 1px solid rgba(55,65,81,0.85);
+      display:inline-flex; align-items:center; gap:7px;
+      box-shadow: 0 8px 22px rgba(0,0,0,.18);
+    }
+    .status-pill .label{ color: var(--muted); font-weight: 650; }
+    .status-pill .value{ font-weight: 700; }
+    .status-pill .value.muted{ color: var(--muted); font-weight: 650; }
+    .status-pill .mini-btn{
+      margin-left: 4px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(75,85,99,0.75);
+      background: rgba(31,41,55,0.75);
+      color: var(--text);
+      cursor:pointer;
+      font-size: 12px;
+      font-weight: 650;
+    }
+    .status-pill .mini-btn:hover{ filter:brightness(1.12); }
+
+    /* ===== Toggle ===== */
+    .seg{
+      display:inline-flex;
+      border-radius: 999px;
+      overflow:hidden;
+      border: 1px solid rgba(75,85,99,0.85);
+      background: rgba(15,23,42,0.6);
+    }
+    .seg button{
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 750;
+      display:inline-flex; align-items:center; gap:6px;
+    }
+    .seg button.active{
+      background: rgba(56,189,248,0.12);
+      color: var(--text);
+    }
+
+    /* ===== Main (Tabs) ===== */
+    .main{
+      flex:1;
+      min-height: 0; /* allow overflow */
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+      padding-bottom: calc(var(--logH) + 12px); /* 给底部日志腾位置 */
+    }
+    .tabs{
+      display:flex;
+      flex-wrap:wrap;
+      gap: 8px;
+      align-items:center;
+    }
+    .tab-btn{
+      padding: 9px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(75,85,99,0.8);
+      background: rgba(15,23,42,0.65);
+      color: var(--muted);
+      cursor:pointer;
+      font-size: 13px;
+      font-weight: 780;
+    }
+    .tab-btn.active{
+      background: rgba(34,197,94,0.15);
+      color: var(--text);
+      border-color: rgba(34,197,94,0.55);
+    }
+
+    .panel-wrap{
+      flex:1;
+      min-height: 0;
+      overflow:auto;
+      padding-right: 6px;
+    }
+    .panel{
+      display:none;
+      animation: fadeIn .12s ease-in;
+    }
+    .panel.active{ display:block; }
+    @keyframes fadeIn{ from{opacity:.65; transform: translateY(2px);} to{opacity:1; transform: translateY(0);} }
+
+    .card{
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 14px 14px 16px;
+      border: 1px solid var(--stroke);
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+    }
+    .card-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .card-title{
+      font-size: 15px;
+      font-weight: 850;
+      margin: 0;
+    }
+    .badge{
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      border: 1px solid rgba(148,163,184,0.5);
+      color: var(--muted);
+      background: rgba(15,23,42,0.35);
+      white-space: nowrap;
+      font-weight: 700;
+    }
+    .hint{
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.55;
+      margin: 6px 0 10px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 900px){
+      body{ overflow:auto; } /* 小屏允许整体滚动避免遮挡 */
+      .app{ height:auto; overflow:visible; padding-bottom: calc(var(--logH) + 16px); }
+      .main{ padding-bottom: 0; }
+      .panel-wrap{ overflow:visible; }
+      .grid{ grid-template-columns: 1fr; }
+      .log-dock{ position: sticky; bottom: 0; }
+    }
+
+    .field{ margin-bottom: 10px; }
+    .field label{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: #d1d5db;
+      gap: 8px;
+      font-weight: 650;
+    }
+    .field small{
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    input[type="text"], input[type="number"], textarea, select{
+      width:100%;
+      padding: 9px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(55,65,81,0.92);
+      background: rgba(15,23,42,0.9);
+      color: var(--text);
+      font-size: 13px;
+    }
+    textarea{ min-height: 86px; max-height: 210px; resize: vertical; }
+    input:focus, textarea:focus, select:focus{
+      outline:none;
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 1px rgba(56,189,248,0.28);
+    }
+
+    .row{
+      display:flex; gap: 10px; align-items:center; flex-wrap:wrap;
+    }
+    .row .grow{ flex:1; min-width: 220px; }
+
+    .footer{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap: 10px;
+      flex-wrap:wrap;
+      margin-top: 8px;
+    }
+    .msg{
+      margin-top: 8px;
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+    .msg.ok{ color: var(--good); }
+    .msg.err{ color: var(--bad); }
+
+    code{
+      font-size: 11px;
+      background: rgba(15,23,42,0.85);
+      border: 1px solid rgba(75,85,99,0.55);
+      border-radius: 8px;
+      padding: 2px 7px;
+    }
+
+    /* ===== Log Dock ===== */
+    .log-dock{
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 0;
+      width: min(1200px, 100vw);
+      height: var(--logH);
+      padding: 10px 14px 12px;
+      background: rgba(2,6,23,0.88);
+      border-top: 1px solid rgba(75,85,99,0.65);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 -18px 40px rgba(0,0,0,.55);
+      z-index: 99;
+    }
+    .log-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .log-title{
+      display:flex; align-items:center; gap: 10px;
+      font-size: 13px; font-weight: 850;
+      margin: 0;
+    }
+    .log-title .muted{ color: var(--muted); font-weight: 650; font-size: 12px; }
+    .log-actions{
+      display:flex; align-items:center; gap: 8px; flex-wrap:wrap;
+    }
+    .log-body{
+      height: calc(var(--logH) - 46px);
+      overflow:auto;
+      border-radius: 12px;
+      border: 1px solid rgba(75,85,99,0.55);
+      background: rgba(15,23,42,0.62);
+      padding: 8px;
+    }
+    .log-item{
+      display:flex;
+      gap: 10px;
+      padding: 8px 8px;
+      border-radius: 12px;
+      border: 1px solid rgba(75,85,99,0.35);
+      background: rgba(2,6,23,0.32);
+      margin-bottom: 8px;
+    }
+    .log-meta{
+      min-width: 190px;
+      max-width: 220px;
+      display:flex;
+      flex-direction:column;
+      gap: 4px;
+      font-size: 12px;
+    }
+    .log-meta .fn{ font-weight: 850; }
+    .log-meta .ts{ color: var(--muted); font-weight: 650; font-size: 11px; }
+    .log-meta .tag{
+      display:inline-flex;
+      width: fit-content;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 750;
+      border: 1px solid rgba(148,163,184,0.35);
+      color: var(--muted);
+      background: rgba(15,23,42,0.25);
+    }
+    .log-data{
+      flex:1;
+      min-width: 0;
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+    }
+    .hex{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.45;
+      word-break: break-all;
+      color: #d1d5db;
+    }
+    .log-btns{
+      display:flex;
+      gap: 8px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+    .mini{
+      padding: 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(75,85,99,0.7);
+      background: rgba(31,41,55,0.6);
+      color: var(--text);
+      cursor:pointer;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .mini:hover{ filter: brightness(1.12); }
+
+    .warn{ color: var(--warn); }
+    .good{ color: var(--good); }
+    .bad{ color: var(--bad); }
+
+    .hidden{ display:none !important; }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div>
+      <div class="title">
+        💵💵💵 HuanXiBot V3
+        <span class="pill">BNB Chain · 批量买入 / 空投 / 提现 / 查询</span>
+      </div>
+      <div class="subtitle">
+        仅合约 Owner 可调用。BNB花费Owner钱包余额，其他一律花费合约内余额。<br>
+         <code>仅显示data</code>（不弹 MetaMask），<code>发起交易</code>（弹 MetaMask）。
+      </div>
+    </div>
+
+    <div class="right-actions">
+      <div class="seg" title="选择：仅显示 data（不调用 MetaMask） 或 发起交易（调用 MetaMask）">
+        <button id="modeDataOnly" class="active">仅显示data</button>
+        <button id="modeSend">发起交易</button>
+      </div>
+      <button id="connectBtn" class="btn">连接 MetaMask</button>
+    </div>
+  </header>
+
+  <div class="status-bar">
+    <div class="status-pill">
+      <span class="label">钱包</span>
+      <span class="value" id="walletAddress">未连接</span>
+    </div>
+    <div class="status-pill">
+      <span class="label">网络</span>
+      <span class="value muted" id="networkName">-</span>
+    </div>
+    <div class="status-pill">
+      <span class="label">合约</span>
+      <span class="value">
+        <a id="contractLink" href="#" target="_blank" rel="noreferrer">-</a>
+      </span>
+    </div>
+    <div class="status-pill">
+      <span class="label">权限</span>
+      <span class="value" id="ownerFlag">未知</span>
+    </div>
+    <div class="status-pill">
+      <span class="label">运行</span>
+      <span class="value" id="pausedFlag">-</span>
+    </div>
+    <div class="status-pill" title="这里显示合约持有的 payToken（通常是 USDT）余额">
+      <span class="label">合约 USDT 余额</span>
+      <span class="value" id="contractUSDTBalance">-</span>
+      <button class="mini-btn" id="refreshBalanceBtn">刷新</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab-normal">普通购买模式</button>
+      <button class="tab-btn" data-tab="tab-limited">限额购买模式</button>
+      <button class="tab-btn" data-tab="tab-batch">批量工具</button>
+      <button class="tab-btn" data-tab="tab-withdraw">提现</button>
+      <button class="tab-btn" data-tab="tab-balance">查询余额</button>
+      <button class="tab-btn" data-tab="tab-security">安全开关</button>
+    </div>
+
+    <div class="panel-wrap">
+      <!-- ===== 普通购买 ===== -->
+      <section class="panel active" id="tab-normal">
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">普通购买</h3>
+            <span class="badge">每个地址固定花费</span>
+          </div>
+          <div class="hint">
+            选择支付方式后，填写：目标代币 + 每个地址花费 + 收币地址列表。<br>
+            交易按钮一点击就会把本次交易的 <code>data</code> 记录到下方日志（成功/失败/拒绝都记录）。
+          </div>
+
+          <form id="form-normal">
+            <div class="grid">
+              <div class="field">
+                <label>
+                  <span>支付方式</span>
+                  <small>BNB / USDT / 自定义代币</small>
+                </label>
+                <select id="normal-payType">
+                  <option value="BNB">BNB 普通购买</option>
+                  <option value="USDT">USDT 普通购买</option>
+                  <option value="CUSTOM">自定义代币普通购买</option>
+                </select>
+              </div>
+
+              <div class="field hidden" id="normal-payTokenBox">
+                <label>
+                  <span>花费代币地址（payTokenAddr）</span>
+                  <small>仅自定义代币模式需要</small>
+                </label>
+                <input type="text" id="normal-payTokenAddr" placeholder="0x... 花费代币合约地址" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label><span>目标代币地址（tokenToBuy）</span></label>
+              <input type="text" id="normal-tokenToBuy" placeholder="0x... 目标代币合约地址" required />
+            </div>
+
+            <div class="field">
+              <label>
+                <span>每个地址花费数量</span>
+                <small>自动换算 decimals / wei，不需要手动加 0</small>
+              </label>
+              <input type="number" step="0.000000000000000001" min="0" id="normal-amountPer"
+                     placeholder="例如：0.01（BNB）或 100（USDT）" required />
+            </div>
+
+            <div class="field">
+              <label>
+                <span>收币地址列表（一行一个地址）</span>
+                <small>支持换行/逗号分隔</small>
+              </label>
+              <textarea id="normal-recipients" placeholder="0x地址1&#10;0x地址2&#10;0x地址3"></textarea>
+            </div>
+
+            <div class="footer">
+              <div class="hint" style="margin:0">
+                💡 提示：建议先用极小金额测试；合约若处于暂停状态，买入会被拒绝。
+              </div>
+              <button type="submit" class="btn" id="normal-submit">发送交易</button>
+            </div>
+
+            <div id="normal-msg" class="msg"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===== 限额购买 ===== -->
+      <section class="panel" id="tab-limited">
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">限额购买</h3>
+            <span class="badge">每地址：最大花费 + 目标买入数量</span>
+          </div>
+          <div class="hint">
+            一行一个配置：<code>地址, 最大花费, 目标买入数量</code><br>
+            目标买入数量为 <code>0</code> 表示“全力买”（按最大花费尽可能买入）。
+          </div>
+
+          <form id="form-limited">
+            <div class="grid">
+              <div class="field">
+                <label>
+                  <span>支付方式</span>
+                  <small>BNB / USDT / 自定义代币</small>
+                </label>
+                <select id="limited-payType">
+                  <option value="BNB">BNB 限额购买</option>
+                  <option value="USDT">USDT 限额购买</option>
+                  <option value="CUSTOM">自定义代币限额购买</option>
+                </select>
+              </div>
+
+              <div class="field hidden" id="limited-payTokenBox">
+                <label>
+                  <span>花费代币地址（payTokenAddr）</span>
+                  <small>仅自定义代币模式需要</small>
+                </label>
+                <input type="text" id="limited-payTokenAddr" placeholder="0x... 花费代币合约地址" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label><span>目标代币地址（tokenToBuy）</span></label>
+              <input type="text" id="limited-tokenToBuy" placeholder="0x... 目标代币合约地址" required />
+            </div>
+
+            <div class="field">
+              <label>
+                <span>地址配置列表</span>
+                <small>格式：地址, 最大花费, 目标买入数量</small>
+              </label>
+              <textarea id="limited-params"
+                placeholder="0x地址1, 0.05, 1000&#10;0x地址2, 0.02, 500&#10;0x地址3, 0.01, 0"></textarea>
+            </div>
+
+            <div class="footer">
+              <div class="hint" style="margin:0">
+                💡 BNB 模式会自动把“最大花费之和”作为 <code>value</code>；USDT/自定义代币从合约余额扣。
+              </div>
+              <button type="submit" class="btn" id="limited-submit">发送交易</button>
+            </div>
+
+            <div id="limited-msg" class="msg"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===== 批量工具 ===== -->
+      <section class="panel" id="tab-batch">
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">批量空投</h3>
+            <span class="badge">BNB / USDT / 自定义代币</span>
+          </div>
+          <div class="hint">
+            选择空投类型后填写每地址数量和地址列表。USDT 空投本质上是给 payToken（通常是 USDT）调用空投。
+          </div>
+
+          <form id="form-airdrop">
+            <div class="grid">
+              <div class="field">
+                <label>
+                  <span>空投类型</span>
+                  <small>BNB / USDT / 自定义代币</small>
+                </label>
+                <select id="airdrop-type">
+                  <option value="BNB">批量空投 BNB</option>
+                  <option value="USDT">批量空投 USDT</option>
+                  <option value="CUSTOM">批量空投 自定义代币</option>
+                </select>
+              </div>
+
+              <div class="field hidden" id="airdrop-tokenBox">
+                <label>
+                  <span>花费代币地址（token）</span>
+                  <small>仅自定义代币模式需要</small>
+                </label>
+                <input type="text" id="airdrop-tokenAddr" placeholder="0x... 要空投的代币合约地址" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label>
+                <span>每个地址空投数量</span>
+                <small>自动换算 decimals / wei</small>
+              </label>
+              <input type="number" step="0.000000000000000001" min="0" id="airdrop-amountPer"
+                     placeholder="例如：0.005（BNB）或 100（USDT）" required />
+            </div>
+
+            <div class="field">
+              <label><span>地址列表（一行一个地址）</span></label>
+              <textarea id="airdrop-recipients" placeholder="0x地址1&#10;0x地址2"></textarea>
+            </div>
+
+            <div class="footer">
+              <div class="hint" style="margin:0">
+                💡 空投资金来自合约余额；请先确保合约有足够余额。
+              </div>
+              <button type="submit" class="btn" id="airdrop-submit">执行空投</button>
+            </div>
+
+            <div id="airdrop-msg" class="msg"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===== 提现 ===== -->
+      <section class="panel" id="tab-withdraw">
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">提现</h3>
+            <span class="badge">BNB / USDT / 自定义代币</span>
+          </div>
+          <div class="hint">
+            USDT 提现会自动使用合约的 <code>payToken</code> 地址（通常是 USDT）。<br>
+            数量直接写正常数字即可，前端会自动按 decimals 换算。
+          </div>
+
+          <form id="form-withdraw">
+            <div class="grid">
+              <div class="field">
+                <label>
+                  <span>提现类型</span>
+                  <small>BNB / USDT / 自定义代币</small>
+                </label>
+                <select id="withdraw-type">
+                  <option value="BNB">提现 BNB</option>
+                  <option value="USDT">提现 USDT</option>
+                  <option value="CUSTOM">提现 自定义代币</option>
+                </select>
+              </div>
+
+              <div class="field hidden" id="withdraw-tokenBox">
+                <label>
+                  <span>提现代币地址（token）</span>
+                  <small>仅自定义代币模式需要</small>
+                </label>
+                <input type="text" id="withdraw-tokenAddr" placeholder="0x... 提现代币合约地址" />
+              </div>
+            </div>
+
+            <div class="grid">
+              <div class="field">
+                <label><span>接收地址（to）</span></label>
+                <input type="text" id="withdraw-to" placeholder="0x... 接收地址" required />
+              </div>
+              <div class="field">
+                <label>
+                  <span>提现数量（amount）</span>
+                  <small>大于余额时合约通常会全部提走（视合约实现）</small>
+                </label>
+                <input type="number" step="0.000000000000000001" min="0" id="withdraw-amount"
+                       placeholder="例如：0.1（BNB）或 100（USDT）" required />
+              </div>
+            </div>
+
+            <div class="footer">
+              <div class="hint" style="margin:0">
+                💡 若要提现自定义代币，请先确认合约持有该代币余额。
+              </div>
+              <button type="submit" class="btn" id="withdraw-submit">发送交易</button>
+            </div>
+
+            <div id="withdraw-msg" class="msg"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===== 查询余额 ===== -->
+      <section class="panel" id="tab-balance">
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">查询余额</h3>
+            <span class="badge">合约余额查询</span>
+          </div>
+          <div class="hint">
+            查询合约内 BNB / USDT / 自定义代币余额。USDT 查询会自动使用 <code>payToken</code>。
+          </div>
+
+          <form id="form-balance">
+            <div class="grid">
+              <div class="field">
+                <label><span>查询类型</span></label>
+                <select id="balance-type">
+                  <option value="BNB">查询合约内 BNB 余额</option>
+                  <option value="USDT">查询合约内 USDT 余额</option>
+                  <option value="CUSTOM">查询合约内 自定义代币余额</option>
+                </select>
+              </div>
+
+              <div class="field hidden" id="balance-tokenBox">
+                <label>
+                  <span>查询代币地址（token）</span>
+                  <small>仅自定义代币模式需要</small>
+                </label>
+                <input type="text" id="balance-tokenAddr" placeholder="0x... 查询代币合约地址" />
+              </div>
+            </div>
+
+            <div class="footer">
+              <div class="hint" style="margin:0">
+                💡 余额查询不发交易（不会弹 MetaMask）。
+              </div>
+              <button type="submit" class="btn-secondary" id="balance-submit">查询</button>
+            </div>
+
+            <div id="balance-msg" class="msg"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- ===== 安全开关 ===== -->
+      <section class="panel" id="tab-security">
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">安全开关（暂停 / 恢复）</h3>
+            <span class="badge">暂停后买入/空投拒绝执行，但可提现</span>
+          </div>
+          <div class="hint" id="pausedStateText">当前状态：未知</div>
+
+          <div class="footer">
+            <div class="hint" style="margin:0">
+              ⚠️ 若你担心误操作，可先切到「仅显示data」模式，确认 data 无误后再切「发起交易」。
+            </div>
+            <div class="row">
+              <button class="btn-secondary" id="pause-btn">暂停所有购买</button>
+              <button class="btn-secondary" id="unpause-btn">恢复购买</button>
+            </div>
+          </div>
+
+          <div id="pause-msg" class="msg"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 固定底部日志栏 ===== -->
+<div class="log-dock">
+  <div class="log-head">
+    <div class="log-title">
+      📜 交易日志
+      <span class="muted">（点击按钮即记录 data；日志常驻不遮挡主功能）</span>
+    </div>
+    <div class="log-actions">
+      <button class="btn-ghost" id="copyLastBtn">复制最新 data</button>
+      <button class="btn-ghost" id="copyAllBtn">复制全部</button>
+      <button class="btn-ghost" id="clearLogBtn">清空</button>
+    </div>
+  </div>
+  <div class="log-body" id="logBody"></div>
+</div>
+
+<script>
+  // ===== 基本配置（如需更换合约，改这里）=====
+  const CONTRACT_ADDRESS = "0xe39433810EC31f6F7d189079A1F334c4A08E9530"; // 你的 V2 合约
+  const BSCSCAN_ADDR = "https://bscscan.com/address/";
+
+  const CONTRACT_ABI = [
+    "function owner() view returns (address)",
+    "function payToken() view returns (address)",
+    "function paused() view returns (bool)",
+
+    "function pause()",
+    "function unpause()",
+
+    "function buyWithBNB(address tokenToBuy, uint256 bnbPerAddress, address[] calldata recipients) payable",
+    "function buyWithPayToken(address tokenToBuy, uint256 amountPerAddress, address[] calldata recipients)",
+    "function buyWithCustomToken(address payTokenAddr, address tokenToBuy, uint256 amountPerAddress, address[] calldata recipients)",
+
+    "function limitedBuyWithBNB(address tokenToBuy, (address recipient,uint256 maxPayAmount,uint256 targetBuyAmount)[] calldata params) payable",
+    "function limitedBuyWithPayToken(address tokenToBuy, (address recipient,uint256 maxPayAmount,uint256 targetBuyAmount)[] calldata params)",
+    "function limitedBuyWithCustomToken(address payTokenAddr, address tokenToBuy, (address recipient,uint256 maxPayAmount,uint256 targetBuyAmount)[] calldata params)",
+
+    "function airdropBNB(uint256 amountPerAddress, address[] calldata recipients)",
+    "function airdropTokenEqual(address token, uint256 amountPerAddress, address[] calldata recipients)",
+
+    "function withdrawBNB(address to, uint256 amount)",
+    "function withdrawToken(address token, address to, uint256 amount)"
+  ];
+
+  const ERC20_ABI = [
+    "function decimals() view returns (uint8)",
+    "function balanceOf(address account) view returns (uint256)"
+  ];
+
+  // ===== 全局状态 =====
+  let provider, signer, contract, currentAccount, contractOwner, currentNetwork;
+  let txMode = "DATA"; // DATA | SEND
+  const decimalsCache = new Map();
+
+  // ===== DOM =====
+  const connectBtn = document.getElementById("connectBtn");
+  const walletAddressSpan = document.getElementById("walletAddress");
+  const networkNameSpan = document.getElementById("networkName");
+  const ownerFlagSpan = document.getElementById("ownerFlag");
+  const pausedFlagSpan = document.getElementById("pausedFlag");
+  const pausedStateText = document.getElementById("pausedStateText");
+  const contractUSDTBalanceSpan = document.getElementById("contractUSDTBalance");
+  const refreshBalanceBtn = document.getElementById("refreshBalanceBtn");
+  const contractLink = document.getElementById("contractLink");
+
+  const modeDataOnlyBtn = document.getElementById("modeDataOnly");
+  const modeSendBtn = document.getElementById("modeSend");
+
+  const logBody = document.getElementById("logBody");
+  const copyLastBtn = document.getElementById("copyLastBtn");
+  const copyAllBtn = document.getElementById("copyAllBtn");
+  const clearLogBtn = document.getElementById("clearLogBtn");
+
+  // ===== UI 辅助 =====
+  function shortAddr(addr){
+    if(!addr) return "-";
+    return addr.slice(0,6) + "..." + addr.slice(-4);
+  }
+  function nowStr(){
+    const d = new Date();
+    const pad = (n)=> String(n).padStart(2,"0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  function setMsg(el, ok, text){
+    el.className = "msg " + (ok ? "ok" : "err");
+    el.textContent = text || "";
+  }
+  function parseAddressList(text){
+    return (text || "")
+      .split(/\n|,/)
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+  function parseLimitedParams(text){
+    const lines = (text || "").split(/\n+/);
+    const rows = [];
+    for (const line of lines){
+      if(!line.trim()) continue;
+      const parts = line.split(",").map(p=>p.trim()).filter(Boolean);
+      if(parts.length < 3) throw new Error("限额配置行格式错误，请使用：地址, 最大花费, 目标数量");
+      rows.push({ addr: parts[0], maxPay: parts[1], target: parts[2] });
+    }
+    if(rows.length === 0) throw new Error("请至少填写一行地址配置。");
+    return rows;
+  }
+  function normalizeAddr(a){ return (a || "").trim(); }
+
+  // ===== 日志 =====
+  const LOG_KEY = "huanxi_v2_logs_v1";
+  function loadLogs(){
+    try{
+      const raw = localStorage.getItem(LOG_KEY);
+      return raw ? JSON.parse(raw) : [];
+    }catch{ return []; }
+  }
+  function saveLogs(items){
+    try{ localStorage.setItem(LOG_KEY, JSON.stringify(items.slice(0,80))); }catch{}
+  }
+  let logs = loadLogs(); // [{ts, fn, tag, data, extra}]
+  function renderLogs(){
+    logBody.innerHTML = "";
+    if(!logs.length){
+      const empty = document.createElement("div");
+      empty.className = "hex";
+      empty.textContent = "暂无日志。点击任何【发送交易/执行空投】按钮，即可在这里看到本次交易的 data（calldata）。";
+      logBody.appendChild(empty);
+      return;
+    }
+    logs.forEach((item, idx)=>{
+      const wrap = document.createElement("div");
+      wrap.className = "log-item";
+
+      const meta = document.createElement("div");
+      meta.className = "log-meta";
+      meta.innerHTML = `
+        <div class="fn">${item.fn || "-"}</div>
+        <div class="ts">${item.ts || "-"}</div>
+        <div class="tag">${item.tag || "-"}</div>
+      `;
+
+      const data = document.createElement("div");
+      data.className = "log-data";
+      const hex = document.createElement("div");
+      hex.className = "hex";
+      hex.textContent = item.data || "";
+      const extra = document.createElement("div");
+      extra.className = "hex";
+      extra.style.color = "rgba(156,163,175,0.95)";
+      extra.textContent = item.extra || "";
+      data.appendChild(hex);
+      if(item.extra) data.appendChild(extra);
+
+      const btns = document.createElement("div");
+      btns.className = "log-btns";
+      const copyBtn = document.createElement("button");
+      copyBtn.className = "mini";
+      copyBtn.textContent = "复制";
+      copyBtn.addEventListener("click", ()=> copyText(item.data || ""));
+      const delBtn = document.createElement("button");
+      delBtn.className = "mini";
+      delBtn.textContent = "删除";
+      delBtn.addEventListener("click", ()=>{
+        logs.splice(idx,1);
+        saveLogs(logs);
+        renderLogs();
+      });
+      btns.appendChild(copyBtn);
+      btns.appendChild(delBtn);
+
+      wrap.appendChild(meta);
+      wrap.appendChild(data);
+      wrap.appendChild(btns);
+      logBody.appendChild(wrap);
+    });
+  }
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text || "");
+    }catch(e){
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = text || "";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+  }
+  function pushLog(fn, data, tag, extra){
+    logs.unshift({ ts: nowStr(), fn, data, tag, extra: extra || "" });
+    logs = logs.slice(0, 80);
+    saveLogs(logs);
+    renderLogs();
+  }
+
+  copyLastBtn.addEventListener("click", ()=>{
+    if(!logs.length) return;
+    copyText(logs[0].data || "");
+  });
+  copyAllBtn.addEventListener("click", ()=>{
+    if(!logs.length) return;
+    const all = logs.map(x=> `[${x.ts}] ${x.fn} ${x.tag}\n${x.data}\n`).join("\n");
+    copyText(all);
+  });
+  clearLogBtn.addEventListener("click", ()=>{
+    logs = [];
+    saveLogs(logs);
+    renderLogs();
+  });
+
+  // ===== 模式切换 =====
+  function setMode(mode){
+    txMode = mode;
+    if(mode === "DATA"){
+      modeDataOnlyBtn.classList.add("active");
+      modeSendBtn.classList.remove("active");
+    }else{
+      modeDataOnlyBtn.classList.remove("active");
+      modeSendBtn.classList.add("active");
+    }
+  }
+  modeDataOnlyBtn.addEventListener("click", ()=> setMode("DATA"));
+  modeSendBtn.addEventListener("click", ()=> setMode("SEND"));
+
+  // ===== Tabs 切换 =====
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab-btn").forEach(b=> b.classList.remove("active"));
+      btn.classList.add("active");
+      const id = btn.dataset.tab;
+      document.querySelectorAll(".panel").forEach(p=> p.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+    });
+  });
+
+  // ===== Select 动态显示 =====
+  function bindSelectShow(selectId, boxId, whenValue){
+    const sel = document.getElementById(selectId);
+    const box = document.getElementById(boxId);
+    const update = ()=>{
+      const v = sel.value;
+      if(v === whenValue) box.classList.remove("hidden");
+      else box.classList.add("hidden");
+    };
+    sel.addEventListener("change", update);
+    update();
+  }
+  bindSelectShow("normal-payType", "normal-payTokenBox", "CUSTOM");
+  bindSelectShow("limited-payType", "limited-payTokenBox", "CUSTOM");
+  bindSelectShow("airdrop-type", "airdrop-tokenBox", "CUSTOM");
+  bindSelectShow("withdraw-type", "withdraw-tokenBox", "CUSTOM");
+  bindSelectShow("balance-type", "balance-tokenBox", "CUSTOM");
+
+  // ===== 链接初始化 =====
+  contractLink.href = BSCSCAN_ADDR + CONTRACT_ADDRESS;
+  contractLink.textContent = shortAddr(CONTRACT_ADDRESS);
+
+  // ===== decimals helpers（带缓存）=====
+  async function getTokenDecimals(tokenAddr){
+    const key = (tokenAddr || "").toLowerCase();
+    if(decimalsCache.has(key)) return decimalsCache.get(key);
+    const token = new ethers.Contract(tokenAddr, ERC20_ABI, provider);
+    const dec = await token.decimals();
+    decimalsCache.set(key, dec);
+    return dec;
+  }
+  async function getTokenBalance(tokenAddr){
+    const token = new ethers.Contract(tokenAddr, ERC20_ABI, provider);
+    return await token.balanceOf(CONTRACT_ADDRESS);
+  }
+
+  // ===== 状态刷新：网络/owner/paused + USDT余额 =====
+  async function refreshContractStatus(){
+    if(!provider || !contract) return;
+    try{
+      const [network, ownerAddr, pausedVal] = await Promise.all([
+        provider.getNetwork(),
+        contract.owner(),
+        contract.paused(),
+      ]);
+      currentNetwork = network;
+      contractOwner = ownerAddr;
+
+      networkNameSpan.textContent = `${network.name} (${network.chainId})`;
+
+      const isOwner = currentAccount && contractOwner &&
+        currentAccount.toLowerCase() === contractOwner.toLowerCase();
+
+      ownerFlagSpan.textContent = isOwner ? "Owner" : "非 Owner";
+      ownerFlagSpan.style.color = isOwner ? "var(--good)" : "var(--warn)";
+
+      pausedFlagSpan.textContent = pausedVal ? "已暂停" : "运行中";
+      pausedFlagSpan.style.color = pausedVal ? "var(--warn)" : "var(--good)";
+      pausedStateText.textContent = pausedVal ? "当前状态：已暂停（买入/空投会拒绝执行）" : "当前状态：运行中";
+
+      // refresh payToken (USDT) balance
+      await refreshUSDTBalance();
+
+      // 按权限禁用按钮
+      const pauseBtn = document.getElementById("pause-btn");
+      const unpauseBtn = document.getElementById("unpause-btn");
+      pauseBtn.disabled = !isOwner || pausedVal;
+      unpauseBtn.disabled = !isOwner || !pausedVal;
+
+    }catch(e){
+      console.error("refreshContractStatus error:", e);
+    }
+  }
+
+  async function refreshUSDTBalance(){
+    if(!provider || !contract) return;
+    try{
+      const payAddr = await contract.payToken();
+      const dec = await getTokenDecimals(payAddr);
+      const bal = await getTokenBalance(payAddr);
+      contractUSDTBalanceSpan.textContent = `${ethers.utils.formatUnits(bal, dec)} (payToken: ${shortAddr(payAddr)})`;
+    }catch(e){
+      console.error("refreshUSDTBalance error:", e);
+      contractUSDTBalanceSpan.textContent = "-";
+    }
+  }
+  refreshBalanceBtn.addEventListener("click", refreshUSDTBalance);
+
+  // ===== 连接钱包 =====
+  async function connectWallet(){
+    if(!window.ethereum){
+      alert("未检测到 MetaMask，请先安装浏览器钱包。");
+      return;
+    }
+    try{
+      connectBtn.disabled = true;
+      connectBtn.textContent = "连接中...";
+
+      provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      signer = provider.getSigner();
+      currentAccount = await signer.getAddress();
+
+      walletAddressSpan.textContent = shortAddr(currentAccount);
+
+      currentNetwork = await provider.getNetwork();
+      if(currentNetwork.chainId !== 56){
+        alert("当前网络不是 BNB Chain 主网（chainId=56）。请在 MetaMask 中切换到 BNB Smart Chain Mainnet。");
+      }
+
+      contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+
+      await refreshContractStatus();
+      connectBtn.textContent = "已连接";
+    }catch(e){
+      console.error(e);
+      alert("连接失败：" + (e.message || e));
+      connectBtn.textContent = "连接 MetaMask";
+    }finally{
+      connectBtn.disabled = false;
+    }
+  }
+  connectBtn.addEventListener("click", connectWallet);
+
+  // ===== 交易构造 & 执行：统一入口 =====
+  async function buildAndMaybeSend({ fn, args, overrides, msgEl, tag, postRefresh }){
+    // 1) 预检查
+    if(!contract) throw new Error("请先连接 MetaMask。");
+
+    // 2) 先生成 data（保证即使用户点拒绝也能记录）
+    let txReq;
+    try{
+      txReq = await contract.populateTransaction[fn](...args, overrides || {});
+    }catch(e){
+      // populate 失败时，退而求其次：用 interface 编码
+      try{
+        const data = contract.interface.encodeFunctionData(fn, args);
+        txReq = { to: CONTRACT_ADDRESS, data, ...(overrides || {}) };
+      }catch(ee){
+        throw new Error("生成 data 失败：" + (ee.message || ee));
+      }
+    }
+    const dataHex = txReq.data || "";
+    const valueHint = (txReq.value && !ethers.BigNumber.from(txReq.value).isZero())
+      ? ("value=" + ethers.utils.formatEther(txReq.value) + " BNB") : "";
+
+    pushLog(fn, dataHex, tag || (txMode==="DATA" ? "仅data" : "准备交易"), valueHint);
+
+    // 3) DATA 模式：只展示 data
+    if(txMode === "DATA"){
+      setMsg(msgEl, true, "已生成 calldata(data)，未发起交易（仅显示data 模式）。\n你可以在底部日志复制本次 data。");
+      return;
+    }
+
+    // 4) SEND 模式：真正发交易（调用 MetaMask）
+    let tx;
+    try{
+      setMsg(msgEl, true, "已记录 data，准备发起交易（MetaMask 将弹窗）。");
+      tx = await contract[fn](...args, overrides || {});
+      pushLog(fn, dataHex, "已发送", "txHash=" + tx.hash);
+      setMsg(msgEl, true, "交易已发送，等待确认中...\nTX: " + tx.hash);
+      await tx.wait();
+      pushLog(fn, dataHex, "已确认", "txHash=" + tx.hash);
+      setMsg(msgEl, true, "交易已确认 ✅\nTX: " + tx.hash);
+      if(typeof postRefresh === "function") await postRefresh();
+    }catch(e){
+      const msg = (e.data?.message || e.message || String(e));
+      pushLog(fn, dataHex, "失败/拒绝", msg.slice(0, 180));
+      setMsg(msgEl, false, "交易失败/被拒绝：\n" + msg);
+    }
+  }
+
+  // ===== 普通购买 =====
+  document.getElementById("form-normal").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const msgEl = document.getElementById("normal-msg");
+    setMsg(msgEl, true, "");
+
+    try{
+      const payType = document.getElementById("normal-payType").value;
+      const payTokenAddr = normalizeAddr(document.getElementById("normal-payTokenAddr").value);
+      const tokenToBuy = normalizeAddr(document.getElementById("normal-tokenToBuy").value);
+      const amountPerStr = (document.getElementById("normal-amountPer").value || "").trim();
+      const recipients = parseAddressList(document.getElementById("normal-recipients").value);
+
+      if(!tokenToBuy) throw new Error("请填写目标代币地址。");
+      if(!amountPerStr || Number(amountPerStr) <= 0) throw new Error("每个地址花费必须 > 0。");
+      if(recipients.length === 0) throw new Error("请至少填写一个收币地址。");
+
+      if(payType === "BNB"){
+        const per = ethers.utils.parseEther(amountPerStr);
+        const total = per.mul(recipients.length);
+        await buildAndMaybeSend({
+          fn: "buyWithBNB",
+          args: [tokenToBuy, per, recipients],
+          overrides: { value: total },
+          msgEl,
+          tag: "普通/BNB",
+          postRefresh: refreshContractStatus
+        });
+      }else if(payType === "USDT"){
+        const payAddr = await contract.payToken();
+        const dec = await getTokenDecimals(payAddr);
+        const per = ethers.utils.parseUnits(amountPerStr, dec);
+        await buildAndMaybeSend({
+          fn: "buyWithPayToken",
+          args: [tokenToBuy, per, recipients],
+          overrides: {},
+          msgEl,
+          tag: "普通/USDT",
+          postRefresh: refreshUSDTBalance
+        });
+      }else{ // CUSTOM
+        if(!payTokenAddr) throw new Error("自定义代币模式：请填写花费代币地址。");
+        const dec = await getTokenDecimals(payTokenAddr);
+        const per = ethers.utils.parseUnits(amountPerStr, dec);
+        await buildAndMaybeSend({
+          fn: "buyWithCustomToken",
+          args: [payTokenAddr, tokenToBuy, per, recipients],
+          overrides: {},
+          msgEl,
+          tag: "普通/自定义",
+          postRefresh: refreshContractStatus
+        });
+      }
+
+    }catch(err){
+      console.error(err);
+      setMsg(msgEl, false, err.message || String(err));
+    }
+  });
+
+  // ===== 限额购买 =====
+  document.getElementById("form-limited").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const msgEl = document.getElementById("limited-msg");
+    setMsg(msgEl, true, "");
+
+    try{
+      const payType = document.getElementById("limited-payType").value;
+      const payTokenAddr = normalizeAddr(document.getElementById("limited-payTokenAddr").value);
+      const tokenToBuy = normalizeAddr(document.getElementById("limited-tokenToBuy").value);
+      const rows = parseLimitedParams(document.getElementById("limited-params").value);
+
+      if(!tokenToBuy) throw new Error("请填写目标代币地址。");
+
+      const tokenDec = await getTokenDecimals(tokenToBuy);
+
+      if(payType === "BNB"){
+        let totalMax = ethers.BigNumber.from(0);
+        const params = rows.map(r=>{
+          const maxPay = ethers.utils.parseEther(r.maxPay || "0");
+          if(maxPay.lte(0)) throw new Error("最大花费必须 > 0（地址：" + r.addr + "）");
+          totalMax = totalMax.add(maxPay);
+          const target = (r.target && r.target !== "0")
+            ? ethers.utils.parseUnits(r.target, tokenDec)
+            : ethers.BigNumber.from(0);
+          return { recipient: r.addr, maxPayAmount: maxPay, targetBuyAmount: target };
+        });
+
+        await buildAndMaybeSend({
+          fn: "limitedBuyWithBNB",
+          args: [tokenToBuy, params],
+          overrides: { value: totalMax },
+          msgEl,
+          tag: "限额/BNB",
+          postRefresh: refreshContractStatus
+        });
+
+      }else if(payType === "USDT"){
+        const payAddr = await contract.payToken();
+        const payDec = await getTokenDecimals(payAddr);
+        const params = rows.map(r=>{
+          const maxPay = ethers.utils.parseUnits(r.maxPay || "0", payDec);
+          if(maxPay.lte(0)) throw new Error("最大花费必须 > 0（地址：" + r.addr + "）");
+          const target = (r.target && r.target !== "0")
+            ? ethers.utils.parseUnits(r.target, tokenDec)
+            : ethers.BigNumber.from(0);
+          return { recipient: r.addr, maxPayAmount: maxPay, targetBuyAmount: target };
+        });
+
+        await buildAndMaybeSend({
+          fn: "limitedBuyWithPayToken",
+          args: [tokenToBuy, params],
+          overrides: {},
+          msgEl,
+          tag: "限额/USDT",
+          postRefresh: refreshUSDTBalance
+        });
+
+      }else{ // CUSTOM
+        if(!payTokenAddr) throw new Error("自定义代币模式：请填写花费代币地址。");
+        const payDec = await getTokenDecimals(payTokenAddr);
+
+        const params = rows.map(r=>{
+          const maxPay = ethers.utils.parseUnits(r.maxPay || "0", payDec);
+          if(maxPay.lte(0)) throw new Error("最大花费必须 > 0（地址：" + r.addr + "）");
+          const target = (r.target && r.target !== "0")
+            ? ethers.utils.parseUnits(r.target, tokenDec)
+            : ethers.BigNumber.from(0);
+          return { recipient: r.addr, maxPayAmount: maxPay, targetBuyAmount: target };
+        });
+
+        await buildAndMaybeSend({
+          fn: "limitedBuyWithCustomToken",
+          args: [payTokenAddr, tokenToBuy, params],
+          overrides: {},
+          msgEl,
+          tag: "限额/自定义",
+          postRefresh: refreshContractStatus
+        });
+      }
+
+    }catch(err){
+      console.error(err);
+      setMsg(msgEl, false, err.message || String(err));
+    }
+  });
+
+  // ===== 批量空投 =====
+  document.getElementById("form-airdrop").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const msgEl = document.getElementById("airdrop-msg");
+    setMsg(msgEl, true, "");
+    try{
+      if(!provider) throw new Error("请先连接 MetaMask。");
+
+      const type = document.getElementById("airdrop-type").value;
+      const tokenAddrCustom = normalizeAddr(document.getElementById("airdrop-tokenAddr").value);
+      const amountPerStr = (document.getElementById("airdrop-amountPer").value || "").trim();
+      const recipients = parseAddressList(document.getElementById("airdrop-recipients").value);
+
+      if(!amountPerStr || Number(amountPerStr) <= 0) throw new Error("每个地址空投数量必须 > 0。");
+      if(recipients.length === 0) throw new Error("请至少填写一个地址。");
+
+      if(type === "BNB"){
+        const per = ethers.utils.parseEther(amountPerStr);
+        await buildAndMaybeSend({
+          fn: "airdropBNB",
+          args: [per, recipients],
+          overrides: {},
+          msgEl,
+          tag: "空投/BNB",
+          postRefresh: refreshContractStatus
+        });
+      }else{
+        let tokenAddr;
+        if(type === "USDT"){
+          tokenAddr = await contract.payToken();
+        }else{
+          if(!tokenAddrCustom) throw new Error("自定义代币空投：请填写花费代币地址。");
+          tokenAddr = tokenAddrCustom;
+        }
+        const dec = await getTokenDecimals(tokenAddr);
+        const per = ethers.utils.parseUnits(amountPerStr, dec);
+        await buildAndMaybeSend({
+          fn: "airdropTokenEqual",
+          args: [tokenAddr, per, recipients],
+          overrides: {},
+          msgEl,
+          tag: type === "USDT" ? "空投/USDT" : "空投/自定义",
+          postRefresh: refreshContractStatus
+        });
+      }
+
+    }catch(err){
+      console.error(err);
+      setMsg(msgEl, false, err.message || String(err));
+    }
+  });
+
+  // ===== 提现 =====
+  document.getElementById("form-withdraw").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const msgEl = document.getElementById("withdraw-msg");
+    setMsg(msgEl, true, "");
+    try{
+      if(!provider) throw new Error("请先连接 MetaMask。");
+
+      const type = document.getElementById("withdraw-type").value;
+      const tokenAddrCustom = normalizeAddr(document.getElementById("withdraw-tokenAddr").value);
+      const to = normalizeAddr(document.getElementById("withdraw-to").value);
+      const amountStr = (document.getElementById("withdraw-amount").value || "").trim();
+
+      if(!to) throw new Error("请填写接收地址。");
+      if(!amountStr || Number(amountStr) <= 0) throw new Error("提现数量必须 > 0。");
+
+      if(type === "BNB"){
+        const amt = ethers.utils.parseEther(amountStr);
+        await buildAndMaybeSend({
+          fn: "withdrawBNB",
+          args: [to, amt],
+          overrides: {},
+          msgEl,
+          tag: "提现/BNB",
+          postRefresh: refreshContractStatus
+        });
+      }else{
+        let tokenAddr;
+        if(type === "USDT"){
+          tokenAddr = await contract.payToken();
+        }else{
+          if(!tokenAddrCustom) throw new Error("提现自定义代币：请填写提现代币地址。");
+          tokenAddr = tokenAddrCustom;
+        }
+        const dec = await getTokenDecimals(tokenAddr);
+        const amt = ethers.utils.parseUnits(amountStr, dec);
+        await buildAndMaybeSend({
+          fn: "withdrawToken",
+          args: [tokenAddr, to, amt],
+          overrides: {},
+          msgEl,
+          tag: type === "USDT" ? "提现/USDT" : "提现/自定义",
+          postRefresh: refreshContractStatus
+        });
+      }
+
+    }catch(err){
+      console.error(err);
+      setMsg(msgEl, false, err.message || String(err));
+    }
+  });
+
+  // ===== 查询余额（不发交易）=====
+  document.getElementById("form-balance").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    const msgEl = document.getElementById("balance-msg");
+    setMsg(msgEl, true, "");
+    try{
+      if(!provider) throw new Error("请先连接 MetaMask。");
+
+      const type = document.getElementById("balance-type").value;
+      const tokenAddrCustom = normalizeAddr(document.getElementById("balance-tokenAddr").value);
+
+      if(type === "BNB"){
+        const bal = await provider.getBalance(CONTRACT_ADDRESS);
+        setMsg(msgEl, true, "合约内 BNB 余额：\n" + ethers.utils.formatEther(bal) + " BNB");
+      }else{
+        let tokenAddr;
+        if(type === "USDT"){
+          tokenAddr = await contract.payToken();
+        }else{
+          if(!tokenAddrCustom) throw new Error("查询自定义代币：请填写查询代币地址。");
+          tokenAddr = tokenAddrCustom;
+        }
+        const dec = await getTokenDecimals(tokenAddr);
+        const bal = await getTokenBalance(tokenAddr);
+        setMsg(msgEl, true, `合约内 Token 余额（${shortAddr(tokenAddr)}）：\n${ethers.utils.formatUnits(bal, dec)}  （decimals=${dec}）`);
+      }
+    }catch(err){
+      console.error(err);
+      setMsg(msgEl, false, err.message || String(err));
+    }
+  });
+
+  // ===== 安全开关 =====
+  document.getElementById("pause-btn").addEventListener("click", async ()=>{
+    const msgEl = document.getElementById("pause-msg");
+    setMsg(msgEl, true, "");
+    try{
+      await buildAndMaybeSend({
+        fn: "pause",
+        args: [],
+        overrides: {},
+        msgEl,
+        tag: "安全/暂停",
+        postRefresh: refreshContractStatus
+      });
+    }catch(err){
+      console.error(err);
+      setMsg(msgEl, false, err.message || String(err));
+    }
+  });
+  document.getElementById("unpause-btn").addEventListener("click", async ()=>{
+    const msgEl = document.getElementById("pause-msg");
+    setMsg(msgEl, true, "");
+    try{
+      await buildAndMaybeSend({
+        fn: "unpause",
+        args: [],
+        overrides: {},
+        msgEl,
+        tag: "安全/恢复",
+        postRefresh: refreshContractStatus
+      });
+    }catch(err){
+      console.error(err);
+      setMsg(msgEl, false, err.message || String(err));
+    }
+  });
+
+  // ===== 初次渲染 =====
+  renderLogs();
+  setMode("DATA");
+</script>
+</body>
+</html>
